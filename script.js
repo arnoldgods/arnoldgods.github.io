@@ -68,7 +68,7 @@ muteBtn.addEventListener('click', () => {
 
 // ===== Firebase Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
-const BASE_COUNT = 704; // Başlangıç sayısı
+const BASE_COUNT = 1237; // Başlangıç sayısı
 const SESSION_KEY = 'arnoldgods_session_counted';
 
 // Firebase Config
