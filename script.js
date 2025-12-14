@@ -69,11 +69,12 @@ muteBtn.addEventListener('click', () => {
 // ===== Visitor Counter =====
 // ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
-const NAMESPACE = 'arnoldgods-portfolio';
+const NAMESPACE = 'arnoldgods-portfolio-v2';
 const KEY = 'visits';
 const OFFSET = 703;
 
-fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY}/up`)
+// Add timestamp to prevent browser caching
+fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY}/up?ts=${new Date().getTime()}`)
     .then(response => response.json())
     .then(data => {
         // API returns the increments. We add our offset (703).
