@@ -68,66 +68,99 @@ muteBtn.addEventListener('click', () => {
 
 // ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
+const BASE_COUNT = 704; // Başlangıç sayısı
+const COUNTER_STORAGE_KEY = 'arnoldgods_visitor_count';
 
-// Hits counter service (hits.dwyl.com) - Free and reliable
-// The counter increments on each page load (tracked by IP/session)
-
-const BASE_COUNT = 704; // Starting base count
-const COUNTER_STORAGE_KEY = 'arnoldgods_last_count';
-const HIT_URL = 'https://hits.dwyl.com/arnoldgods/arnoldgodssite.svg';
-
-// Function to update the display
-function updateCounter(count) {
-    visitorCountElement.textContent = count;
-    localStorage.setItem(COUNTER_STORAGE_KEY, count.toString());
+// Sayacı güncelle
+function updateCounterDisplay(count) {
+    if (visitorCountElement) {
+        visitorCountElement.textContent = count;
+        localStorage.setItem(COUNTER_STORAGE_KEY, count.toString());
+    }
 }
 
-// Method 1: Use an Image object to trigger the hit (this always works for registering)
-const hitImg = new Image();
-hitImg.crossOrigin = 'anonymous';
-hitImg.src = HIT_URL + '?t=' + Date.now(); // Cache buster
+// Son bilinen sayıyı göster (yükleme sırasında)
+const lastKnownCount = localStorage.getItem(COUNTER_STORAGE_KEY);
+if (lastKnownCount) {
+    visitorCountElement.textContent = lastKnownCount;
+}
 
-// Method 2: Try to fetch and parse the SVG content
-// Some browsers may block this due to CORS, but we try anyway
-fetch(HIT_URL, { mode: 'cors' })
-    .then(response => {
-        if (!response.ok) throw new Error('Fetch failed');
-        return response.text();
-    })
-    .then(svgText => {
-        // Parse count from SVG - look for the count in the text element
-        // Expected format: <text x="54" y="14">NUMBER</text>
-        const patterns = [
-            />(\d+)<\/text>/,           // Standard pattern
-            /y="14">(\d+)</,            // Alternative
-            />(\d+)</g                  // Simple digit pattern
-        ];
+// API servisleri - sırayla denenir
+const API_SERVICES = [
+    {
+        name: 'CountAPI',
+        hit: 'https://api.countapi.xyz/hit/arnoldgods.github.io/visits',
+        get: 'https://api.countapi.xyz/get/arnoldgods.github.io/visits'
+    },
+    {
+        name: 'CounterAPI',
+        hit: 'https://counterapi.dev/api/arnoldgods/visits/up',
+        get: 'https://counterapi.dev/api/arnoldgods/visits'
+    }
+];
 
-        let hitCount = null;
-        for (const pattern of patterns) {
-            const match = svgText.match(pattern);
-            if (match && match[1]) {
-                hitCount = parseInt(match[1], 10);
-                break;
+// Timeout ile fetch
+async function fetchWithTimeout(url, timeout = 5000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            mode: 'cors',
+            cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
+    }
+}
+
+// Ana sayaç fonksiyonu
+async function initVisitorCounter() {
+    let success = false;
+
+    // Her API servisini dene
+    for (const service of API_SERVICES) {
+        if (success) break;
+
+        try {
+            console.log(`Trying ${service.name}...`);
+            const response = await fetchWithTimeout(service.hit);
+
+            if (response.ok) {
+                const data = await response.json();
+                // Farklı API'ler farklı response formatları kullanır
+                const count = data.value || data.count || data.views || data;
+
+                if (typeof count === 'number' && count > 0) {
+                    const totalCount = BASE_COUNT + count;
+                    updateCounterDisplay(totalCount);
+                    console.log(`${service.name} success! Count: ${totalCount}`);
+                    success = true;
+                }
             }
+        } catch (error) {
+            console.log(`${service.name} failed:`, error.message);
         }
+    }
 
-        if (hitCount !== null && !isNaN(hitCount)) {
-            updateCounter(BASE_COUNT + hitCount);
+    // Hiçbir API çalışmadıysa localStorage'dan al veya başlangıç değerini kullan
+    if (!success) {
+        console.log('All APIs failed, using fallback');
+        const storedCount = localStorage.getItem(COUNTER_STORAGE_KEY);
+        if (storedCount) {
+            // Mevcut değeri göster, +1 ekle (bu ziyaret için)
+            const newCount = parseInt(storedCount, 10) + 1;
+            updateCounterDisplay(newCount);
         } else {
-            // Couldn't parse, use fallback
-            throw new Error('Could not parse count from SVG');
+            // İlk ziyaret
+            updateCounterDisplay(BASE_COUNT + 1);
         }
-    })
-    .catch(error => {
-        console.log('SVG fetch/parse failed:', error);
-        // Fallback: Try using the image onload to extract dimensions or just use stored value
-        const lastCount = localStorage.getItem(COUNTER_STORAGE_KEY);
-        if (lastCount) {
-            visitorCountElement.textContent = lastCount;
-        } else {
-            // First visit - increment from base
-            updateCounter(BASE_COUNT + 1);
-        }
-    });
+    }
+}
 
+// Sayaç başlat
+initVisitorCounter();
