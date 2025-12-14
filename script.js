@@ -69,31 +69,65 @@ muteBtn.addEventListener('click', () => {
 // ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
 
-// CountAPI.xyz - Reliable and persistent counter service
-// Namespace: arnoldgods-site, Key: page-views
-// This will increment the count by 1 on every page load and return the new value
-const NAMESPACE = 'arnoldgods-site';
-const KEY = 'page-views';
-const BASE_COUNT = 704; // Starting base count
+// Hits counter service (hits.dwyl.com) - Free and reliable
+// The counter increments on each page load (tracked by IP/session)
 
-// First, try to hit the counter
-fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${KEY}`)
-    .then(response => response.json())
-    .then(data => {
-        // Add the base count to the API counter value
-        const totalCount = BASE_COUNT + data.value;
-        visitorCountElement.textContent = totalCount;
+const BASE_COUNT = 704; // Starting base count
+const COUNTER_STORAGE_KEY = 'arnoldgods_last_count';
+const HIT_URL = 'https://hits.dwyl.com/arnoldgods/arnoldgodssite.svg';
+
+// Function to update the display
+function updateCounter(count) {
+    visitorCountElement.textContent = count;
+    localStorage.setItem(COUNTER_STORAGE_KEY, count.toString());
+}
+
+// Method 1: Use an Image object to trigger the hit (this always works for registering)
+const hitImg = new Image();
+hitImg.crossOrigin = 'anonymous';
+hitImg.src = HIT_URL + '?t=' + Date.now(); // Cache buster
+
+// Method 2: Try to fetch and parse the SVG content
+// Some browsers may block this due to CORS, but we try anyway
+fetch(HIT_URL, { mode: 'cors' })
+    .then(response => {
+        if (!response.ok) throw new Error('Fetch failed');
+        return response.text();
+    })
+    .then(svgText => {
+        // Parse count from SVG - look for the count in the text element
+        // Expected format: <text x="54" y="14">NUMBER</text>
+        const patterns = [
+            />(\d+)<\/text>/,           // Standard pattern
+            /y="14">(\d+)</,            // Alternative
+            />(\d+)</g                  // Simple digit pattern
+        ];
+
+        let hitCount = null;
+        for (const pattern of patterns) {
+            const match = svgText.match(pattern);
+            if (match && match[1]) {
+                hitCount = parseInt(match[1], 10);
+                break;
+            }
+        }
+
+        if (hitCount !== null && !isNaN(hitCount)) {
+            updateCounter(BASE_COUNT + hitCount);
+        } else {
+            // Couldn't parse, use fallback
+            throw new Error('Could not parse count from SVG');
+        }
     })
     .catch(error => {
-        console.error('Error fetching visitor count:', error);
-        // Fallback: try alternative API or show base count
-        fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${KEY}`)
-            .then(response => response.json())
-            .then(data => {
-                const totalCount = BASE_COUNT + (data.value || 0);
-                visitorCountElement.textContent = totalCount;
-            })
-            .catch(() => {
-                visitorCountElement.textContent = BASE_COUNT;
-            });
+        console.log('SVG fetch/parse failed:', error);
+        // Fallback: Try using the image onload to extract dimensions or just use stored value
+        const lastCount = localStorage.getItem(COUNTER_STORAGE_KEY);
+        if (lastCount) {
+            visitorCountElement.textContent = lastCount;
+        } else {
+            // First visit - increment from base
+            updateCounter(BASE_COUNT + 1);
+        }
     });
+
