@@ -69,16 +69,31 @@ muteBtn.addEventListener('click', () => {
 // ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
 
-// visitor-badge.laobi.icu - Tested and working!
-// query_only=false means it will increment AND return the new count
-fetch('https://visitor-badge.laobi.icu/badge?page_id=arnoldgods.github.io&query_only=false')
-    .then(response => response.text())
-    .then(text => {
-        // The response is just the count number as text
-        const count = parseInt(text.trim()) || 703;
-        visitorCountElement.textContent = count;
+// CountAPI.xyz - Reliable and persistent counter service
+// Namespace: arnoldgods-site, Key: page-views
+// This will increment the count by 1 on every page load and return the new value
+const NAMESPACE = 'arnoldgods-site';
+const KEY = 'page-views';
+const BASE_COUNT = 704; // Starting base count
+
+// First, try to hit the counter
+fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${KEY}`)
+    .then(response => response.json())
+    .then(data => {
+        // Add the base count to the API counter value
+        const totalCount = BASE_COUNT + data.value;
+        visitorCountElement.textContent = totalCount;
     })
     .catch(error => {
         console.error('Error fetching visitor count:', error);
-        visitorCountElement.textContent = 703;
+        // Fallback: try alternative API or show base count
+        fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${KEY}`)
+            .then(response => response.json())
+            .then(data => {
+                const totalCount = BASE_COUNT + (data.value || 0);
+                visitorCountElement.textContent = totalCount;
+            })
+            .catch(() => {
+                visitorCountElement.textContent = BASE_COUNT;
+            });
     });
