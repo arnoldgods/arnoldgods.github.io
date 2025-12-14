@@ -70,12 +70,11 @@ muteBtn.addEventListener('click', () => {
 const visitorCountElement = document.getElementById('visitorCount');
 const OFFSET = 703;
 
-// Using countapi.xyz for global persistent counter
-// The /hit endpoint increments and returns the new value
-fetch('https://api.countapi.xyz/hit/arnoldgods.github.io/visits')
+// counterapi.dev - tested and working
+fetch('https://api.counterapi.dev/v1/arnoldgods-test/pageviews/up')
     .then(response => response.json())
     .then(data => {
-        const totalCount = data.value + OFFSET;
+        const totalCount = data.count + OFFSET;
         visitorCountElement.textContent = totalCount;
     })
     .catch(error => {
