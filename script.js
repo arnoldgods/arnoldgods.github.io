@@ -67,24 +67,18 @@ muteBtn.addEventListener('click', () => {
 });
 
 // ===== Visitor Counter =====
-// ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
-const NAMESPACE = 'arnoldgods-portfolio-v2';
-const KEY = 'visits';
 const OFFSET = 703;
 
-// Add timestamp to prevent browser caching
-fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${KEY}/up?ts=${new Date().getTime()}`)
+// Using countapi.xyz for global persistent counter
+// The /hit endpoint increments and returns the new value
+fetch('https://api.countapi.xyz/hit/arnoldgods.github.io/visits')
     .then(response => response.json())
     .then(data => {
-        // API returns the increments. We add our offset (703).
-        // If it's the very first time this API key is hit, it might return 1.
-        // So 1 + 703 = 704.
-        const totalCount = data.count + OFFSET;
+        const totalCount = data.value + OFFSET;
         visitorCountElement.textContent = totalCount;
     })
     .catch(error => {
         console.error('Error fetching visitor count:', error);
-        // Fallback or keep placeholder if API fails
         visitorCountElement.textContent = OFFSET;
     });
