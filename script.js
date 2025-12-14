@@ -68,16 +68,17 @@ muteBtn.addEventListener('click', () => {
 
 // ===== Visitor Counter =====
 const visitorCountElement = document.getElementById('visitorCount');
-const OFFSET = 703;
 
-// counterapi.dev - tested and working
-fetch('https://api.counterapi.dev/v1/arnoldgods-test/pageviews/up')
-    .then(response => response.json())
-    .then(data => {
-        const totalCount = data.count + OFFSET;
-        visitorCountElement.textContent = totalCount;
+// visitor-badge.laobi.icu - Tested and working!
+// query_only=false means it will increment AND return the new count
+fetch('https://visitor-badge.laobi.icu/badge?page_id=arnoldgods.github.io&query_only=false')
+    .then(response => response.text())
+    .then(text => {
+        // The response is just the count number as text
+        const count = parseInt(text.trim()) || 703;
+        visitorCountElement.textContent = count;
     })
     .catch(error => {
         console.error('Error fetching visitor count:', error);
-        visitorCountElement.textContent = OFFSET;
+        visitorCountElement.textContent = 703;
     });
